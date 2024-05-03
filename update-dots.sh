@@ -15,16 +15,20 @@ folders=(".config" ".local")
 modified_files=()
 
 # Find all files in the specified folders and their subfolders
-for folder in "${folders[@]}"; do
-    find "$folder" -type f -print0 | while IFS= read -r -d '' file; do
-        if [[ $(get_checksum "$file") != $(get_checksum "$HOME/$file") ]]; then
-            modified_files+=("$file")
-        fi
-    done
-done
+while IFS= read -r -d '' file; do
+    # Calculate checksums
+    base_checksum=$(get_checksum "$base/$file")
+    home_checksum=$(get_checksum "$HOME/$file")
+    # Compare checksums and add to modified_files if necessary
+    if [[ $base_checksum != $home_checksum ]]; then
+        modified_files+=("$file")
+    fi
+done < <(find "${folders[@]}" -type f -print0)
+
+
+echo "Modified files: ${modified_files[@]}"
 
 # Output all modified files
-
 if [[ ${#modified_files[@]} -gt 0 ]]; then
     echo "The following files have been modified since the last update:"
     for file in "${modified_files[@]}"; do
@@ -34,12 +38,12 @@ else
     echo "No files have been modified since the last update."
 fi
 
+
 # Then update the repository
 git pull
 if [[ $? -eq 0 ]]; then
     # Already up to date
     echo "Quitting..."
-    # quitting
     exit 0
 else
     echo "Update successful."
@@ -51,10 +55,8 @@ for folder in "${folders[@]}"; do
     find "$folder" -type f -print0 | while IFS= read -r -d '' file; do
         if [[ -f "$file" ]]; then
             if [[ ! " ${modified_files[@]} " =~ " ${file} " ]]; then
-                # Get the relative path of the file
-                relative_path="${file#"$folder"/}"
                 # Construct the destination path
-                destination="$HOME/$relative_path"
+                destination="$HOME/$file"
                 # Copy the file
                 cp -rf "$base/$file" "$destination"
             fi
@@ -67,10 +69,9 @@ for folder in "${folders[@]}"; do
     # Find all files (including those in subdirectories) and copy them
     find "$folder" -type f -print0 | while IFS= read -r -d '' file; do
         if [[ ! -f "$HOME/$file" ]]; then
-            # Get the relative path of the file
-            relative_path="${file#"$folder"/}"
+            echo "Adding new file: $file"
             # Construct the destination path
-            destination="$HOME/$relative_path"
+            destination="$HOME/$file"
             # Copy the file
             cp -rf "$base/$file" "$destination"
         fi

@@ -90,7 +90,7 @@ function get_checksums() {
 }
 
 function get_checksum() {
-    # Get the checksum of a specific file
-    checksum=$(md5sum $1)
+  # Get the checksum of a specific file
+  md5sum "$1" | awk '{print $1}'
 }
 
